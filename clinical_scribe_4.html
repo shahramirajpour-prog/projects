@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clinical Scribe</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0f0d;--surface:#1a1a17;--surface2:#222220;
+  --border:#2e2e2a;--border2:#3a3a36;
+  --ink:#f0ede6;--ink2:#a0a09a;--ink3:#5a5a54;
+  --accent:#4ade9a;--accent-dim:#1a3d2e;
+  --doc:#60a5fa;--doc-dim:#1a2a3d;
+  --pat:#f97316;--pat-dim:#3d2010;
+  --danger:#f87171;--danger-dim:#3d1a1a;
+  --sans:'Instrument Sans',sans-serif;
+  --serif:'Instrument Serif',serif;
+  --mono:'JetBrains Mono',monospace;
+  --radius:10px;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--ink);min-height:100vh;padding:32px 20px 80px;display:flex;flex-direction:column;align-items:center;}
+header{width:100%;max-width:860px;display:flex;align-items:center;gap:16px;padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:28px;}
+.logo{font-family:var(--serif);font-size:26px;color:var(--ink);letter-spacing:-0.3px;}
+.logo span{color:var(--accent);}
+.header-tag{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--ink3);letter-spacing:0.1em;text-transform:uppercase;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px 24px;width:100%;max-width:860px;margin-bottom:14px;}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.card-label{font-family:var(--mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink3);}
+.field-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+@media(max-width:600px){.field-grid{grid-template-columns:1fr;}}
+.field{display:flex;flex-direction:column;gap:6px;}
+.field label{font-family:var(--mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink3);}
+.field input{font-family:var(--sans);font-size:14px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--ink);outline:none;transition:border-color 0.2s;}
+.field input:focus{border-color:var(--accent);}
+.field input::placeholder{color:var(--ink3);}
+.api-row{margin-top:12px;}
+.recorder-area{display:flex;flex-direction:column;align-items:center;gap:18px;padding:8px 0;}
+.rec-controls{display:flex;align-items:center;gap:16px;}
+.mic-btn{width:72px;height:72px;border-radius:50%;border:1.5px solid var(--border2);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;outline:none;}
+.mic-btn:hover{border-color:var(--ink3);}
+.mic-btn.recording{border-color:#ef4444;background:var(--danger-dim);animation:pulse 1.4s ease-in-out infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.3);}50%{box-shadow:0 0 0 10px rgba(239,68,68,0);}}
+.mic-icon{width:26px;height:26px;stroke:var(--ink2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:stroke 0.2s;}
+.mic-btn.recording .mic-icon{stroke:#ef4444;}
+.waveform{display:flex;align-items:center;gap:3px;height:28px;opacity:0;transition:opacity 0.3s;}
+.waveform.active{opacity:1;}
+.wave-bar{width:3px;border-radius:2px;background:#ef4444;animation:wave 0.8s ease-in-out infinite;height:4px;}
+.wave-bar:nth-child(1){animation-delay:0s;}.wave-bar:nth-child(2){animation-delay:0.1s;}.wave-bar:nth-child(3){animation-delay:0.2s;}.wave-bar:nth-child(4){animation-delay:0.3s;}.wave-bar:nth-child(5){animation-delay:0.15s;}.wave-bar:nth-child(6){animation-delay:0.05s;}.wave-bar:nth-child(7){animation-delay:0.25s;}
+@keyframes wave{0%,100%{height:4px;}50%{height:22px;}}
+.status-pill{font-family:var(--mono);font-size:11px;padding:5px 12px;border-radius:20px;background:var(--surface2);border:1px solid var(--border2);color:var(--ink3);letter-spacing:0.05em;white-space:nowrap;}
+.status-pill.live{background:var(--danger-dim);border-color:#ef4444;color:#ef4444;}
+.status-pill.processing{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
+.status-pill.ready{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
+.timer{font-family:var(--mono);font-size:13px;color:var(--ink3);min-width:48px;text-align:center;}
+.transcript-scroll{max-height:260px;overflow-y:auto;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;font-family:var(--mono);font-size:12.5px;line-height:1.9;}
+.transcript-scroll:empty::before{content:"Transcript will appear here after recording...";color:var(--ink3);font-style:italic;}
+.turn{margin-bottom:6px;}
+.turn-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;font-weight:500;margin-right:8px;}
+.turn.doctor .turn-label{color:var(--doc);}
+.turn.patient .turn-label{color:var(--pat);}
+.turn.doctor .turn-text{color:#c8deff;}
+.turn.patient .turn-text{color:#ffe0c8);}
+.turn.unknown .turn-label{color:var(--ink3);}
+.turn.unknown .turn-text{color:var(--ink2);}
+.legend{display:flex;gap:16px;font-family:var(--mono);font-size:11px;}
+.legend-item{display:flex;align-items:center;gap:6px;}
+.legend-dot{width:8px;height:8px;border-radius:50%;}
+.legend-dot.doc{background:var(--doc);}
+.legend-dot.pat{background:var(--pat);}
+.soap-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:600px){.soap-grid{grid-template-columns:1fr;}}
+.soap-field{background:var(--surface2);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.soap-field-label{font-family:var(--mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;padding:8px 14px;border-bottom:1px solid var(--border);color:var(--accent);background:var(--accent-dim);}
+.soap-field-content{font-size:13px;line-height:1.75;padding:12px 14px;color:var(--ink2);min-height:80px;white-space:pre-wrap;}
+.soap-field-content.empty{color:var(--ink3);font-style:italic;}
+.btn{font-family:var(--sans);font-size:13px;font-weight:500;padding:8px 18px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--ink2);cursor:pointer;transition:all 0.15s;}
+.btn:hover{border-color:var(--ink3);color:var(--ink);}
+.btn-accent{background:var(--accent);color:#0a2018;border-color:var(--accent);font-weight:600;}
+.btn-accent:hover{background:#6beaae;border-color:#6beaae;}
+.btn-accent:disabled{opacity:0.35;cursor:not-allowed;}
+.btn-row{display:flex;gap:10px;margin-top:14px;justify-content:flex-end;align-items:center;}
+.notice{font-family:var(--mono);font-size:11.5px;padding:9px 14px;border-radius:8px;margin-top:10px;display:none;line-height:1.6;}
+.notice.error{background:var(--danger-dim);color:var(--danger);border:1px solid #7f2020;display:block;}
+.notice.info{background:var(--accent-dim);color:var(--accent);border:1px solid #1a5c3a;display:block;}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.copy-btn{font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--ink3);cursor:pointer;transition:all 0.15s;}
+.copy-btn:hover{color:var(--ink);border-color:var(--ink3);}
+.progress-wrap{width:100%;height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:10px;display:none;}
+.progress-bar{height:100%;width:0%;background:var(--accent);border-radius:2px;transition:width 0.3s;}
+.key-preview{font-family:var(--mono);font-size:11px;color:var(--ink3);margin-top:5px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Clinical<span>Scribe</span></div>
+  <div class="header-tag">AssemblyAI + OpenAI · SOAP</div>
+</header>
+
+<!-- Config -->
+<div class="card">
+  <div class="card-header"><div class="card-label">Session configuration</div></div>
+  <div class="field-grid">
+    <div class="field">
+      <label>Patient name</label>
+      <input type="text" id="patient-name" placeholder="Full name"/>
+    </div>
+    <div class="field">
+      <label>Date of visit</label>
+      <input type="date" id="visit-date"/>
+    </div>
+    <div class="field">
+      <label>Provider</label>
+      <input type="text" id="provider-name" placeholder="Dr. Smith"/>
+    </div>
+  </div>
+  <div class="field-grid api-row">
+    <div class="field">
+      <label>AssemblyAI API key</label>
+      <input type="text" id="aai-key" placeholder="Your AssemblyAI key" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" oninput="updateKeyPreview('aai-key','aai-preview')"/>
+      <div class="key-preview" id="aai-preview">—</div>
+    </div>
+    <div class="field">
+      <label>OpenAI API key</label>
+      <input type="text" id="openai-key" placeholder="sk-..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" oninput="updateKeyPreview('openai-key','openai-preview')"/>
+      <div class="key-preview" id="openai-preview">—</div>
+    </div>
+    <div class="field">
+      <label>Model</label>
+      <input type="text" id="openai-model" value="gpt-4o" placeholder="gpt-4o"/>
+    </div>
+  </div>
+</div>
+
+<!-- Recorder -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-label">Recording</div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot doc"></div><span style="color:var(--ink3)">Doctor</span></div>
+      <div class="legend-item"><div class="legend-dot pat"></div><span style="color:var(--ink3)">Patient</span></div>
+    </div>
+  </div>
+  <div class="recorder-area">
+    <div class="rec-controls">
+      <button class="mic-btn" id="mic-btn" onclick="toggleRecording()">
+        <svg class="mic-icon" viewBox="0 0 24 24">
+          <rect x="9" y="2" width="6" height="11" rx="3"/>
+          <path d="M5 10a7 7 0 0 0 14 0"/>
+          <line x1="12" y1="19" x2="12" y2="22"/>
+          <line x1="8" y1="22" x2="16" y2="22"/>
+        </svg>
+      </button>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="status-pill" id="status-pill">Click mic to begin</div>
+        <div class="timer" id="timer">00:00</div>
+      </div>
+      <div class="waveform" id="waveform">
+        <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+      </div>
+    </div>
+  </div>
+  <div class="progress-wrap" id="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+  <div id="rec-notice" class="notice"></div>
+</div>
+
+<!-- Transcript -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-label">Diarized transcript</div>
+    <button class="copy-btn" onclick="copyTranscript()">copy</button>
+  </div>
+  <div class="transcript-scroll" id="transcript-box"></div>
+  <div class="btn-row">
+    <button class="btn" onclick="clearAll()">Clear</button>
+    <button class="btn btn-accent" id="generate-btn" onclick="generateSOAP()" disabled>Generate SOAP note →</button>
+  </div>
+  <div id="gen-notice" class="notice"></div>
+</div>
+
+<!-- SOAP -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-label">SOAP note</div>
+    <div style="display:flex;gap:8px;">
+      <button class="copy-btn" onclick="copySOAP()">copy all</button>
+      <button class="copy-btn" onclick="exportToWord()" style="color:var(--accent);border-color:var(--accent);">export to Word</button>
+    </div>
+  </div>
+  <div id="note-header" style="display:none;margin-bottom:14px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;">
+    <div style="font-family:var(--mono);font-size:11px;color:var(--ink3);margin-bottom:4px;">PATIENT RECORD</div>
+    <div style="display:flex;gap:24px;flex-wrap:wrap;">
+      <div><span style="font-family:var(--mono);font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:0.1em;">Name</span><br><span id="note-patient" style="font-size:14px;color:var(--ink);"></span></div>
+      <div><span style="font-family:var(--mono);font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:0.1em;">Date</span><br><span id="note-date" style="font-size:14px;color:var(--ink);"></span></div>
+      <div><span style="font-family:var(--mono);font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:0.1em;">Provider</span><br><span id="note-provider" style="font-size:14px;color:var(--ink);"></span></div>
+    </div>
+  </div>
+  <div class="soap-grid">
+    <div class="soap-field"><div class="soap-field-label">S — Subjective</div><div class="soap-field-content empty" id="soap-s">Chief complaint, history, symptoms</div></div>
+    <div class="soap-field"><div class="soap-field-label">O — Objective</div><div class="soap-field-content empty" id="soap-o">Observations, vitals, findings</div></div>
+    <div class="soap-field"><div class="soap-field-label">A — Assessment</div><div class="soap-field-content empty" id="soap-a">Diagnosis or differential</div></div>
+    <div class="soap-field"><div class="soap-field-label">P — Plan</div><div class="soap-field-content empty" id="soap-p">Treatment, medications, follow-up</div></div>
+  </div>
+</div>
+
+<script>
+let mediaRecorder=null,audioChunks=[],isRecording=false,timerInterval=null,seconds=0,transcriptData=[];
+window._recMimeType='audio/webm';
+
+function startTimer(){seconds=0;timerInterval=setInterval(()=>{seconds++;const m=String(Math.floor(seconds/60)).padStart(2,'0'),s=String(seconds%60).padStart(2,'0');document.getElementById('timer').textContent=m+':'+s;},1000);}
+function stopTimer(){clearInterval(timerInterval);}
+
+async function toggleRecording(){if(isRecording)await stopRecording();else await startRecording();}
+
+async function startRecording(){
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    audioChunks=[];
+    const mimeType=MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':MediaRecorder.isTypeSupported('audio/webm')?'audio/webm':MediaRecorder.isTypeSupported('audio/mp4')?'audio/mp4':'';
+    window._recMimeType=mimeType||'audio/webm';
+    mediaRecorder=new MediaRecorder(stream,mimeType?{mimeType}:{});
+    mediaRecorder.ondataavailable=e=>{if(e.data.size>0)audioChunks.push(e.data);};
+    mediaRecorder.start(1000);
+    isRecording=true;
+    document.getElementById('mic-btn').classList.add('recording');
+    document.getElementById('waveform').classList.add('active');
+    setStatus('Recording','live');
+    startTimer();
+  }catch(e){showNotice('rec-notice','Microphone error: '+e.message,'error');}
+}
+
+async function stopRecording(){
+  return new Promise(resolve=>{
+    mediaRecorder.onstop=async()=>{
+      mediaRecorder.stream.getTracks().forEach(t=>t.stop());
+      isRecording=false;stopTimer();
+      document.getElementById('mic-btn').classList.remove('recording');
+      document.getElementById('waveform').classList.remove('active');
+      setStatus('Processing...','processing');
+      await transcribeWithAssemblyAI();
+      resolve();
+    };
+    mediaRecorder.stop();
+  });
+}
+
+async function transcribeWithAssemblyAI(){
+  const key=document.getElementById('aai-key').value.trim().replace(/[^\u0000-\u007F]/g,'');
+  if(!key){showNotice('rec-notice','Enter your AssemblyAI API key.','error');setStatus('Error','');return;}
+  const blob=new Blob(audioChunks,{type:window._recMimeType});
+  const pw=document.getElementById('progress-wrap'),pb=document.getElementById('progress-bar');
+  pw.style.display='block';pb.style.width='10%';
+  try{
+    // Upload
+    setStatus('Uploading...','processing');
+    const h1=new Headers();h1.append('Authorization',key);h1.append('Content-Type','application/octet-stream');
+    const upRes=await fetch('https://api.assemblyai.com/v2/upload',{method:'POST',headers:h1,body:blob});
+    const upJson=await upRes.json();
+    if(!upRes.ok)throw new Error('Upload failed '+upRes.status+': '+JSON.stringify(upJson));
+    pb.style.width='35%';
+
+    // Transcribe
+    setStatus('Transcribing...','processing');
+    const h2=new Headers();h2.append('Authorization',key);h2.append('Content-Type','application/json');
+    const txRes=await fetch('https://api.assemblyai.com/v2/transcript',{
+      method:'POST',headers:h2,
+      body:JSON.stringify({audio_url:upJson.upload_url,speaker_labels:true,speech_models:['universal-2'],language_code:'en_us'})
+    });
+    const txJson=await txRes.json();
+    if(!txRes.ok)throw new Error('Transcription failed '+txRes.status+': '+JSON.stringify(txJson));
+    const id=txJson.id;
+    pb.style.width='50%';
+
+    // Poll
+    let result;
+    while(true){
+      await new Promise(r=>setTimeout(r,3000));
+      const h3=new Headers();h3.append('Authorization',key);
+      const poll=await fetch('https://api.assemblyai.com/v2/transcript/'+id,{headers:h3});
+      result=await poll.json();
+      if(result.status==='completed'||result.status==='error')break;
+      pb.style.width=Math.min(90,parseInt(pb.style.width)+5)+'%';
+    }
+    pb.style.width='100%';
+    if(result.status==='error')throw new Error('AssemblyAI: '+result.error);
+
+    // Build transcript
+    transcriptData=[];
+    if(result.utterances&&result.utterances.length>0){
+      result.utterances.forEach(u=>transcriptData.push({speaker:'Speaker '+u.speaker,text:u.text}));
+    }else{
+      transcriptData=[{speaker:'Unknown',text:result.text}];
+    }
+    renderTranscript();
+    setStatus('Ready','ready');
+    document.getElementById('generate-btn').disabled=false;
+    setTimeout(()=>{pw.style.display='none';pb.style.width='0%';},1000);
+  }catch(e){
+    showNotice('rec-notice',e.message,'error');
+    setStatus('Error','');
+    pw.style.display='none';
+  }
+}
+
+function getSpeakerClass(s){return s.includes('A')?'doctor':s.includes('B')?'patient':'unknown';}
+function getSpeakerLabel(s){return s.includes('A')?'Doctor':s.includes('B')?'Patient':s;}
+
+function renderTranscript(){
+  const box=document.getElementById('transcript-box');box.innerHTML='';
+  transcriptData.forEach(turn=>{
+    const cls=getSpeakerClass(turn.speaker),label=getSpeakerLabel(turn.speaker);
+    const div=document.createElement('div');div.className='turn '+cls;
+    div.innerHTML=`<span class="turn-label">${label}</span><span class="turn-text">${turn.text}</span>`;
+    box.appendChild(div);
+  });
+}
+
+function getPlainTranscript(){return transcriptData.map(t=>getSpeakerLabel(t.speaker)+': '+t.text).join('\n');}
+
+async function generateSOAP(){
+  const openaiKey=document.getElementById('openai-key').value.trim().replace(/[^\u0000-\u007F]/g,'');
+  if(!openaiKey){showNotice('gen-notice','Enter your OpenAI API key.','error');return;}
+  if(!transcriptData.length){showNotice('gen-notice','No transcript yet.','error');return;}
+
+  const patient=document.getElementById('patient-name').value.trim()||'Unknown';
+  const date=document.getElementById('visit-date').value||new Date().toISOString().split('T')[0];
+  const provider=document.getElementById('provider-name').value.trim()||'Unknown';
+  const model=document.getElementById('openai-model').value.trim()||'gpt-4o';
+  const transcript=getPlainTranscript();
+
+  const btn=document.getElementById('generate-btn');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Generating...';
+  document.getElementById('gen-notice').className='notice';
+
+  try{
+    const h=new Headers();
+    h.append('Authorization','Bearer '+openaiKey);
+    h.append('Content-Type','application/json');
+
+    const res=await fetch('https://api.openai.com/v1/chat/completions',{
+      method:'POST',headers:h,
+      body:JSON.stringify({
+        model:model,
+        messages:[
+          {role:'system',content:'You are a medical scribe. Given a doctor-patient transcript, return a SOAP note as JSON only. No markdown, no extra text. Return exactly: {"subjective":"...","objective":"...","assessment":"...","plan":"..."}'},
+          {role:'user',content:`Patient: ${patient}\nDate: ${date}\nProvider: ${provider}\n\nTranscript:\n${transcript}`}
+        ],
+        temperature:0.3
+      })
+    });
+
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error?.message||'OpenAI error '+res.status);
+
+    const raw=data.choices[0].message.content;
+    const clean=raw.replace(/```json|```/g,'').trim();
+    const soap=JSON.parse(clean);
+
+    ['s','o','a','p'].forEach((k,i)=>{
+      const keys=['subjective','objective','assessment','plan'];
+      const el=document.getElementById('soap-'+k);
+      el.textContent=soap[keys[i]]||'—';el.classList.remove('empty');
+    });
+
+    document.getElementById('note-patient').textContent=patient;
+    document.getElementById('note-date').textContent=new Date(date+'T00:00:00').toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+    document.getElementById('note-provider').textContent=provider;
+    document.getElementById('note-header').style.display='block';
+    showNotice('gen-notice','SOAP note generated.','info');
+
+  }catch(e){
+    showNotice('gen-notice','Error: '+e.message,'error');
+  }finally{
+    btn.disabled=false;btn.innerHTML='Generate SOAP note →';
+  }
+}
+
+function setStatus(msg,type){const el=document.getElementById('status-pill');el.textContent=msg;el.className='status-pill'+(type?' '+type:'');}
+function showNotice(id,msg,type){const el=document.getElementById(id);el.textContent=msg;el.className='notice '+type;}
+function updateKeyPreview(inputId,previewId){
+  const k=document.getElementById(inputId).value;
+  const p=k.length>8?k.substring(0,4)+'...'+k.substring(k.length-4)+' ('+k.length+' chars)':k.length>0?'(too short)':'—';
+  document.getElementById(previewId).textContent=p;
+}
+function clearAll(){
+  transcriptData=[];
+  document.getElementById('transcript-box').innerHTML='';
+  document.getElementById('generate-btn').disabled=true;
+  document.getElementById('timer').textContent='00:00';
+  document.getElementById('note-header').style.display='none';
+  ['soap-s','soap-o','soap-a','soap-p'].forEach(id=>{const el=document.getElementById(id);el.classList.add('empty');});
+  document.getElementById('soap-s').textContent='Chief complaint, history, symptoms';
+  document.getElementById('soap-o').textContent='Observations, vitals, findings';
+  document.getElementById('soap-a').textContent='Diagnosis or differential';
+  document.getElementById('soap-p').textContent='Treatment, medications, follow-up';
+  ['rec-notice','gen-notice'].forEach(id=>{document.getElementById(id).className='notice';});
+  setStatus('Click mic to begin','');
+}
+function copyTranscript(){navigator.clipboard.writeText(getPlainTranscript()).catch(()=>{});}
+function copySOAP(){
+  const p=document.getElementById('note-patient').textContent;
+  const d=document.getElementById('note-date').textContent;
+  const pr=document.getElementById('note-provider').textContent;
+  const text=`Patient: ${p}\nDate: ${d}\nProvider: ${pr}\n\nSUBJECTIVE\n${document.getElementById('soap-s').textContent}\n\nOBJECTIVE\n${document.getElementById('soap-o').textContent}\n\nASSESSMENT\n${document.getElementById('soap-a').textContent}\n\nPLAN\n${document.getElementById('soap-p').textContent}`;
+  navigator.clipboard.writeText(text).catch(()=>{});
+}
+document.getElementById('visit-date').value=new Date().toISOString().split('T')[0];
+
+function exportToWord(){
+  const patient=document.getElementById('note-patient').textContent||'Unknown';
+  const date=document.getElementById('note-date').textContent||new Date().toLocaleDateString();
+  const provider=document.getElementById('note-provider').textContent||'Unknown';
+  const s=document.getElementById('soap-s').textContent;
+  const o=document.getElementById('soap-o').textContent;
+  const a=document.getElementById('soap-a').textContent;
+  const p=document.getElementById('soap-p').textContent;
+
+  const html = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office"
+          xmlns:w="urn:schemas-microsoft-com:office:word"
+          xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta charset="utf-8">
+      <title>SOAP Note</title>
+      <!--[if gte mso 9]>
+      <xml><w:WordDocument><w:View>Print</w:View><w:Zoom>90</w:Zoom></w:WordDocument></xml>
+      <![endif]-->
+      <style>
+        body { font-family: Calibri, sans-serif; font-size: 11pt; margin: 1in; }
+        h1 { font-size: 16pt; color: #1a3d2e; border-bottom: 2px solid #1a3d2e; padding-bottom: 6pt; margin-bottom: 12pt; }
+        .meta-table { width: 100%; border-collapse: collapse; margin-bottom: 20pt; }
+        .meta-table td { padding: 4pt 8pt; font-size: 10pt; }
+        .meta-label { color: #888; text-transform: uppercase; font-size: 8pt; letter-spacing: 0.05em; }
+        .meta-value { font-weight: bold; font-size: 11pt; }
+        .soap-section { margin-bottom: 16pt; }
+        .soap-label { font-size: 9pt; text-transform: uppercase; letter-spacing: 0.1em; color: #1a3d2e; font-weight: bold; margin-bottom: 4pt; border-bottom: 1px solid #c8e6c9; padding-bottom: 3pt; }
+        .soap-content { font-size: 11pt; line-height: 1.6; color: #333; white-space: pre-wrap; }
+        .footer { margin-top: 30pt; font-size: 8pt; color: #aaa; border-top: 1px solid #eee; padding-top: 6pt; }
+      </style>
+    </head>
+    <body>
+      <h1>SOAP Note</h1>
+      <table class="meta-table">
+        <tr>
+          <td><div class="meta-label">Patient</div><div class="meta-value">${patient}</div></td>
+          <td><div class="meta-label">Date of Visit</div><div class="meta-value">${date}</div></td>
+          <td><div class="meta-label">Provider</div><div class="meta-value">${provider}</div></td>
+        </tr>
+      </table>
+      <div class="soap-section">
+        <div class="soap-label">S &mdash; Subjective</div>
+        <div class="soap-content">${s}</div>
+      </div>
+      <div class="soap-section">
+        <div class="soap-label">O &mdash; Objective</div>
+        <div class="soap-content">${o}</div>
+      </div>
+      <div class="soap-section">
+        <div class="soap-label">A &mdash; Assessment</div>
+        <div class="soap-content">${a}</div>
+      </div>
+      <div class="soap-section">
+        <div class="soap-label">P &mdash; Plan</div>
+        <div class="soap-content">${p}</div>
+      </div>
+      <div class="footer">Generated by Clinical Scribe &nbsp;|&nbsp; ${new Date().toLocaleString()}</div>
+    </body>
+    </html>`;
+
+  const blob = new Blob([html], {type:'application/msword'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'SOAP_Note_'+patient.replace(/\s+/g,'_')+'_'+new Date().toISOString().split('T')[0]+'.doc';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
